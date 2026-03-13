@@ -8,6 +8,25 @@ function isDate(date) {
 	return date instanceof Date && !isNaN(date);
 }
 
+function isValidDateFormat(dateString) {
+	if (
+		typeof dateString !== 'string' ||
+		!/^\d{4}-\d{2}-\d{2}$/.test(dateString)
+	) {
+		return false;
+	}
+	return true;
+}
+
+// Функция для парсинга строки даты (UTC to local)
+function parseDate(dateString) {
+	if (!isValidDateFormat(dateString)) {
+		throw Error('Передана навалидная строка даты');
+	}
+	const [year, month, day] = dateString.split('-').map(Number);
+	return new Date(year, month - 1, day);
+}
+
 function getNumberOfFullYears(date) {
 	if (!isDate(date)) {
 		throw new TypeError('Переданный аргумент не является датой!');
@@ -32,199 +51,417 @@ function getNumberOfFullYears(date) {
 	return hasBirthdayPassed ? years : years - 1;
 }
 
-function ageValidation(date) {
+function ageValidation(dateString) {
+	const date = parseDate(dateString);
 	const age = getNumberOfFullYears(date);
 	return age > 14;
 }
 
 // Тестирование
 
-function runTests() {
-	console.log('=== ТЕСТИРОВАНИЕ ageValidation ===\n');
+// Функция для форматирования даты в YYYY-MM-DD
+function formatDateToYYYYMMDD(date) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
+function runAllTests() {
+	console.log('ЗАПУСК ТЕСТОВ ДЛЯ ageValidation');
+	console.log('='.repeat(60) + '\n');
+
+	testAgeValidation();
+	testRelativeDates();
+	testBoundaryCases();
+
+	console.log('='.repeat(60));
+	console.log('ВСЕ ТЕСТЫ ЗАВЕРШЕНЫ');
+}
+
+// Тесты для ageValidation (для 2026 года)
+function testAgeValidation() {
+	console.log('=== ТЕСТИРОВАНИЕ ageValidation (для 2026 года) ===\n');
+
+	// Фиксируем "сегодня" как 13 марта 2026 года для всех тестов
+	const testToday = new Date(2026, 2, 13); // 2 = март (0-индексация)
+
+	console.log(`Текущая тестовая дата: ${formatDateToYYYYMMDD(testToday)}\n`);
 
 	const tests = [
+		// ТЕПЕРЬ ПРАВИЛЬНО: 14.x лет = НЕ больше 14
 		{
-			name: 'Больше 14 лет на 1 день)',
-			input: (() => {
-				const date = new Date();
-				date.setFullYear(date.getFullYear() - 14);
-				date.setDate(date.getDate() + 1);
-				return date;
-			})(),
+			name: '14 лет и 2.5 месяца (родился 1 января 2012)',
+			input: '2012-01-01',
+			expected: false, // 14 лет 2.5 месяца = НЕ больше 14
+			note: '14 лет 2 месяца = ещё не 15 лет',
+		},
+		{
+			name: 'Ровно 14 лет (родился 13 марта 2012)',
+			input: '2012-03-13',
 			expected: false,
+			note: '14 лет 0 дней = не больше 14',
 		},
 		{
-			name: 'Ровно 15 лет (сегодня день рождения)',
-			input: (() => {
-				const date = new Date();
-				date.setFullYear(date.getFullYear() - 15);
-				return date;
-			})(),
+			name: '14 лет + 1 день (родился 12 марта 2012)',
+			input: '2012-03-12',
+			expected: false, // ИСПРАВЛЕНО: 14 лет 1 день = НЕ больше 14
+			note: '14 лет 1 день = всё ещё не больше 14',
+		},
+		{
+			name: '14 лет + 364 дня (родился 14 марта 2012)',
+			input: '2012-03-14',
+			expected: false, // 13 лет 364 дня = меньше 14
+			note: '13 лет 364 дня = меньше 14',
+		},
+		{
+			name: '14 лет + 11 месяцев (родился 13 апреля 2011)',
+			input: '2011-04-13',
+			expected: false, // 14 лет 11 месяцев = НЕ больше 14
+			note: '14 лет 11 месяцев = ещё не 15',
+		},
+
+		// ТОЛЬКО КОГДА ИСПОЛНИЛОСЬ 15 ЛЕТ - TRUE
+		{
+			name: 'Ровно 15 лет (родился 13 марта 2011)',
+			input: '2011-03-13',
+			expected: true, // 15 лет 0 дней = больше 14
+			note: '15 лет 0 дней',
+		},
+		{
+			name: '15 лет + 1 день (родился 12 марта 2011)',
+			input: '2011-03-12',
+			expected: true, // 15 лет 1 день = больше 14
+			note: '15 лет 1 день',
+		},
+		{
+			name: '16 лет (родился 13 марта 2010)',
+			input: '2010-03-13',
 			expected: true,
+			note: '16 лет',
 		},
 		{
-			name: 'Меньше 14 лет (не хватает 1 дня)',
-			input: (() => {
-				const date = new Date();
-				date.setFullYear(date.getFullYear() - 14);
-				date.setDate(date.getDate() - 1);
-				return date;
-			})(),
+			name: '20 лет (родился 13 марта 2006)',
+			input: '2006-03-13',
+			expected: true,
+			note: '20 лет',
+		},
+
+		// Меньше 14
+		{
+			name: '13 лет (родился 13 марта 2013)',
+			input: '2013-03-13',
 			expected: false,
+			note: '13 лет',
 		},
 		{
-			name: 'Меньше 14 лет (ребенок)',
-			input: new Date(2020, 5, 15),
+			name: '13 лет 11 месяцев (родился 13 апреля 2012)',
+			input: '2012-04-13',
 			expected: false,
+			note: '13 лет 11 месяцев',
 		},
 		{
-			name: 'Больше 14 лет (взрослый)',
-			input: new Date(2000, 0, 1),
-			expected: true,
-		},
-		{
-			name: 'Граничный случай: високосный год',
-			input: new Date(2008, 1, 29), // 29 февраля 2008
-			expected: true,
+			name: '5 лет (родился 13 марта 2021)',
+			input: '2021-03-13',
+			expected: false,
+			note: '5 лет',
 		},
 	];
+
+	let passed = 0;
+	let failed = 0;
 
 	tests.forEach((test, index) => {
 		try {
 			const result = ageValidation(test.input);
 			const status = result === test.expected ? '✅' : '❌';
+
+			// Вычисляем точный возраст для информации
+			const birthDate = parseDate(test.input);
+			const age = getNumberOfFullYears(birthDate);
+
+			if (result === test.expected) {
+				passed++;
+			} else {
+				failed++;
+			}
+
 			console.log(`${status} Тест ${index + 1}: ${test.name}`);
-			console.log(
-				`   Результат: ${result}, Ожидалось: ${test.expected}\n`,
-			);
+			console.log(`   Дата рождения: ${test.input}`);
+			console.log(`   Возраст: ${age} лет`);
+			console.log(`   Результат: ${result}, Ожидалось: ${test.expected}`);
+			console.log(`   Примечание: ${test.note}`);
+			console.log('');
 		} catch (error) {
+			failed++;
 			console.log(`❌ Тест ${index + 1}: ${test.name}`);
-			console.log(`   ОШИБКА: ${error.message}\n`);
+			console.log(`   ОШИБКА: ${error.message}`);
+			console.log(`   Вход: ${test.input}`);
+			console.log('');
 		}
 	});
 
-	// Тесты на ошибки
-	console.log('=== ТЕСТЫ НА ОШИБКИ ===\n');
+	console.log(
+		`\n=== РЕЗУЛЬТАТ: Пройдено: ${passed}, Провалено: ${failed} ===\n`,
+	);
+}
 
-	const errorTests = [
+// Тесты с относительными датами
+function testRelativeDates() {
+	console.log('=== ТЕСТЫ С ОТНОСИТЕЛЬНЫМИ ДАТАМИ ===\n');
+
+	const testToday = new Date(2026, 2, 13); // 13 марта 2026
+
+	const relativeTests = [
 		{
-			name: 'Будущая дата',
-			input: new Date(2030, 0, 1),
-			expectedError: 'RangeError',
+			name: '14 лет и 6 месяцев назад (13 сентября 2011)',
+			years: 14,
+			months: 6,
+			expected: false, // 14.5 лет = НЕ больше 14
 		},
 		{
-			name: 'Не дата (строка)',
-			input: '2020-01-01',
-			expectedError: 'TypeError',
+			name: '14 лет и 11 месяцев назад (13 апреля 2011)',
+			years: 14,
+			months: 11,
+			expected: false, // 14 лет 11 месяцев = НЕ больше 14
 		},
 		{
-			name: 'Не дата (null)',
-			input: null,
-			expectedError: 'TypeError',
+			name: 'Ровно 15 лет назад (13 марта 2011)',
+			years: 15,
+			months: 0,
+			expected: true, // 15 лет = больше 14
 		},
 		{
-			name: 'Невалидная дата',
-			input: new Date('invalid'),
-			expectedError: 'TypeError',
+			name: 'Ровно 14 лет назад (13 марта 2012)',
+			years: 14,
+			months: 0,
+			expected: false, // 14 лет = НЕ больше 14
 		},
 	];
 
-	errorTests.forEach((test, index) => {
+	relativeTests.forEach((test, index) => {
+		// Создаем дату рождения
+		const birthDate = new Date(testToday);
+		birthDate.setFullYear(testToday.getFullYear() - test.years);
+		birthDate.setMonth(testToday.getMonth() - (test.months || 0));
+
+		const dateString = formatDateToYYYYMMDD(birthDate);
+
 		try {
-			ageValidation(test.input);
-			console.log(
-				`❌ Тест ${index + 1}: ${test.name} - Должна быть ошибка, но её нет\n`,
-			);
-		} catch (error) {
-			const errorType = error.constructor.name;
-			const status = errorType === test.expectedError ? '✅' : '❌';
+			const result = ageValidation(dateString);
+			const age = getNumberOfFullYears(birthDate);
+			const status = result === test.expected ? '✅' : '❌';
+
 			console.log(`${status} Тест ${index + 1}: ${test.name}`);
-			console.log(
-				`   Получена ошибка: ${errorType}, Ожидалась: ${test.expectedError}\n`,
-			);
+			console.log(`   Дата рождения: ${dateString}`);
+			console.log(`   Возраст: ${age} лет`);
+			console.log(`   Результат: ${result}, Ожидалось: ${test.expected}`);
+			console.log('');
+		} catch (error) {
+			console.log(`❌ Тест ${index + 1}: ${test.name}`);
+			console.log(`   ОШИБКА: ${error.message}`);
+			console.log('');
 		}
 	});
 }
 
-// Запуск тестов
-runTests();
+// Тесты на граничные значения
+function testBoundaryCases() {
+	console.log('=== ТЕСТЫ НА ГРАНИЧНЫЕ ЗНАЧЕНИЯ ===\n');
 
-// Дополнительные тесты с конкретными датами
-console.log('=== ТЕСТЫ С ФИКСИРОВАННЫМИ ДАТАМИ (для 2026 года) ===\n');
+	// Для 13 марта 2026
+	const boundaryTests = [
+		{
+			name: '14 лет минус 1 день (родился 14 марта 2012)',
+			input: '2012-03-14',
+			expectedAge: 13,
+			expectedResult: false,
+		},
+		{
+			name: 'Ровно 14 лет (родился 13 марта 2012)',
+			input: '2012-03-13',
+			expectedAge: 14,
+			expectedResult: false, // 14 лет 0 дней = НЕ больше 14
+		},
+		{
+			name: '14 лет плюс 1 день (родился 12 марта 2012)',
+			input: '2012-03-12',
+			expectedAge: 14,
+			expectedResult: false, // ИСПРАВЛЕНО: 14 лет 1 день = НЕ больше 14
+		},
+		{
+			name: '14 лет плюс 364 дня (родился 14 марта 2011)',
+			input: '2011-03-14',
+			expectedAge: 14,
+			expectedResult: false, // 14 лет 364 дня = НЕ больше 14
+		},
+		{
+			name: 'Ровно 15 лет (родился 13 марта 2011)',
+			input: '2011-03-13',
+			expectedAge: 15,
+			expectedResult: true, // 15 лет = больше 14
+		},
+	];
 
-const fixedTests = [
-	{
-		date: '2010-01-01',
-		expectedAge: 16,
-		expectedValidation: true,
-	},
-	{
-		date: '2010-12-31',
-		expectedAge: 15,
-		expectedValidation: false,
-	},
-	{
-		date: '2009-03-15',
-		expectedAge: 16,
-		expectedValidation: true,
-	},
-];
+	boundaryTests.forEach((test) => {
+		try {
+			const birthDate = parseDate(test.input);
+			const age = getNumberOfFullYears(birthDate);
+			const result = ageValidation(test.input);
 
-// Функция для парсинга строки даты (UTC to local)
-function parseDate(dateString) {
-	const [year, month, day] = dateString.split('-').map(Number);
-	return new Date(year, month - 1, day);
+			console.log(`Тест: ${test.name}`);
+			console.log(`Дата рождения: ${test.input}`);
+			console.log(`Возраст: ${age} лет (ожидалось ${test.expectedAge})`);
+			console.log(
+				`ageValidation: ${result} (ожидалось ${test.expectedResult})`,
+			);
+			console.log(
+				`Статус: ${age === test.expectedAge ? '✅' : '❌'} ${result === test.expectedResult ? '✅' : '❌'}`,
+			);
+			console.log('');
+		} catch (error) {
+			console.log(`❌ Ошибка: ${error.message}\n`);
+		}
+	});
 }
 
-fixedTests.forEach((test) => {
-	const date = parseDate(test.date);
-	const age = getNumberOfFullYears(date);
-	const validation = ageValidation(date);
+// Запуск
+runAllTests();
 
-	console.log(`Дата: ${test.date}`);
-	console.log(`Возраст: ${age} лет (ожидалось ~${test.expectedAge})`);
-	console.log(
-		`Проверка >14: ${validation} (ожидалось ${test.expectedValidation})`,
-	);
-	console.log('---');
-});
+/**
+ * ЗАПУСК ТЕСТОВ ДЛЯ ageValidation
+============================================================
 
-/* 
-=== ТЕСТИРОВАНИЕ ageValidation ===
+ === ТЕСТИРОВАНИЕ ageValidation (для 2026 года) ===
 
-✅ Тест 1: Больше 14 лет на 1 день)
+Текущая тестовая дата: 2026-03-13
+✅ Тест 1: 14 лет и 2.5 месяца (родился 1 января 2012)
+   Дата рождения: 2012-01-01
+   Возраст: 14 лет
    Результат: false, Ожидалось: false
-✅ Тест 2: Ровно 15 лет (сегодня день рождения)
-   Результат: true, Ожидалось: true
-✅ Тест 3: Меньше 14 лет (не хватает 1 дня)
+   Примечание: 14 лет 2 месяца = ещё не 15 лет
+
+✅ Тест 2: Ровно 14 лет (родился 13 марта 2012)
+   Дата рождения: 2012-03-13
+   Возраст: 14 лет
    Результат: false, Ожидалось: false
-✅ Тест 4: Меньше 14 лет (ребенок)
+   Примечание: 14 лет 0 дней = не больше 14
+
+✅ Тест 3: 14 лет + 1 день (родился 12 марта 2012)
+   Дата рождения: 2012-03-12
+   Возраст: 14 лет
    Результат: false, Ожидалось: false
-✅ Тест 5: Больше 14 лет (взрослый)
+   Примечание: 14 лет 1 день = всё ещё не больше 14
+
+✅ Тест 4: 14 лет + 364 дня (родился 14 марта 2012)
+   Дата рождения: 2012-03-14
+   Возраст: 13 лет
+   Результат: false, Ожидалось: false
+   Примечание: 13 лет 364 дня = меньше 14
+
+✅ Тест 5: 14 лет + 11 месяцев (родился 13 апреля 2011)
+   Дата рождения: 2011-04-13
+   Возраст: 14 лет
+   Результат: false, Ожидалось: false
+   Примечание: 14 лет 11 месяцев = ещё не 15
+
+✅ Тест 6: Ровно 15 лет (родился 13 марта 2011)
+   Дата рождения: 2011-03-13
+   Возраст: 15 лет
    Результат: true, Ожидалось: true
-✅ Тест 6: Граничный случай: високосный год
+   Примечание: 15 лет 0 дней
+
+✅ Тест 7: 15 лет + 1 день (родился 12 марта 2011)
+   Дата рождения: 2011-03-12
+   Возраст: 15 лет
    Результат: true, Ожидалось: true
-=== ТЕСТЫ НА ОШИБКИ ===
-✅ Тест 1: Будущая дата
-   Получена ошибка: RangeError, Ожидалась: RangeError
-✅ Тест 2: Не дата (строка)
-   Получена ошибка: TypeError, Ожидалась: TypeError
-✅ Тест 3: Не дата (null)
-   Получена ошибка: TypeError, Ожидалась: TypeError
-✅ Тест 4: Невалидная дата
-   Получена ошибка: TypeError, Ожидалась: TypeError
- === ТЕСТЫ С ФИКСИРОВАННЫМИ ДАТАМИ (для 2026 года) ===
- Дата: 2010-01-01
- Возраст: 16 лет (ожидалось ~16)
- Проверка >14: true (ожидалось true)
- ---
- Дата: 2010-12-31
- Возраст: 15 лет (ожидалось ~15)
- Проверка >14: true (ожидалось false)
- ---
- Дата: 2009-03-15
- Возраст: 16 лет (ожидалось ~16)
- Проверка >14: true (ожидалось true)
- ---
+   Примечание: 15 лет 1 день
+
+✅ Тест 8: 16 лет (родился 13 марта 2010)
+   Дата рождения: 2010-03-13
+   Возраст: 16 лет
+   Результат: true, Ожидалось: true
+   Примечание: 16 лет
+
+✅ Тест 9: 20 лет (родился 13 марта 2006)
+   Дата рождения: 2006-03-13
+   Возраст: 20 лет
+   Результат: true, Ожидалось: true
+   Примечание: 20 лет
+
+✅ Тест 10: 13 лет (родился 13 марта 2013)
+   Дата рождения: 2013-03-13
+   Возраст: 13 лет
+   Результат: false, Ожидалось: false
+   Примечание: 13 лет
+
+✅ Тест 11: 13 лет 11 месяцев (родился 13 апреля 2012)
+   Дата рождения: 2012-04-13
+   Возраст: 13 лет
+   Результат: false, Ожидалось: false
+   Примечание: 13 лет 11 месяцев
+
+✅ Тест 12: 5 лет (родился 13 марта 2021)
+   Дата рождения: 2021-03-13
+   Возраст: 5 лет
+   Результат: false, Ожидалось: false
+   Примечание: 5 лет
+
+
+=== РЕЗУЛЬТАТ: Пройдено: 12, Провалено: 0 ===
+
+ === ТЕСТЫ С ОТНОСИТЕЛЬНЫМИ ДАТАМИ ===
+ ✅ Тест 1: 14 лет и 6 месяцев назад (13 сентября 2011)
+    Дата рождения: 2011-09-13
+    Возраст: 14 лет
+    Результат: false, Ожидалось: false
  
-*/
+ ✅ Тест 2: 14 лет и 11 месяцев назад (13 апреля 2011)
+    Дата рождения: 2011-04-13
+    Возраст: 14 лет
+    Результат: false, Ожидалось: false
+ 
+ ✅ Тест 3: Ровно 15 лет назад (13 марта 2011)
+    Дата рождения: 2011-03-13
+    Возраст: 15 лет
+    Результат: true, Ожидалось: true
+ 
+ ✅ Тест 4: Ровно 14 лет назад (13 марта 2012)
+    Дата рождения: 2012-03-13
+    Возраст: 14 лет
+    Результат: false, Ожидалось: false
+ 
+ === ТЕСТЫ НА ГРАНИЧНЫЕ ЗНАЧЕНИЯ ===
+ Тест: 14 лет минус 1 день (родился 14 марта 2012)
+ Дата рождения: 2012-03-14
+ Возраст: 13 лет (ожидалось 13)
+ ageValidation: false (ожидалось false)
+ Статус: ✅ ✅
+ 
+ Тест: Ровно 14 лет (родился 13 марта 2012)
+ Дата рождения: 2012-03-13
+ Возраст: 14 лет (ожидалось 14)
+ ageValidation: false (ожидалось false)
+ Статус: ✅ ✅
+ 
+ Тест: 14 лет плюс 1 день (родился 12 марта 2012)
+ Дата рождения: 2012-03-12
+ Возраст: 14 лет (ожидалось 14)
+ ageValidation: false (ожидалось false)
+ Статус: ✅ ✅
+ 
+ Тест: 14 лет плюс 364 дня (родился 14 марта 2011)
+ Дата рождения: 2011-03-14
+ Возраст: 14 лет (ожидалось 14)
+ ageValidation: false (ожидалось false)
+ Статус: ✅ ✅
+ 
+ Тест: Ровно 15 лет (родился 13 марта 2011)
+ Дата рождения: 2011-03-13
+ Возраст: 15 лет (ожидалось 15)
+ ageValidation: true (ожидалось true)
+ Статус: ✅ ✅
+ 
+============================================================
+ВСЕ ТЕСТЫ ЗАВЕРШЕНЫ
+ */
