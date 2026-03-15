@@ -17,11 +17,11 @@ const INTERVAL_DELAY = MS.SECOND;
 /** @type {PageElements} */
 const page = {};
 
-/** @constant {Object.<string, string>} */
+/** @constant {Object.<string, string[]>} */
 const styles = {
-	timers: 'timers',
-	now: 'now',
-	beforeNewYear: 'before-new-year',
+	timers: ['timers'],
+	now: ['now'],
+	beforeNewYear: ['before-new-year'],
 };
 
 /** @constant {Object} */
@@ -167,14 +167,14 @@ function render() {
 
 	createElement({
 		tag: 'span',
-		styles: [styles.now],
+		styles: styles.now,
 		parent: page.timers,
 		pageKey: 'now',
 	});
 
 	createElement({
 		tag: 'span',
-		styles: [styles.beforeNewYear],
+		styles: styles.beforeNewYear,
 		parent: page.timers,
 		pageKey: 'beforeNewYear',
 	});
