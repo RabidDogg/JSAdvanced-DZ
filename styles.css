@@ -1,0 +1,25 @@
+body {
+	background-color: #1c1b21;
+	text-align: center;
+	font-size: 18px;
+}
+
+.timers {
+	display: flex;
+	gap: 50px;
+	flex-direction: column;
+	padding: 80px;
+	justify-content: center;
+	align-items: center;
+	font-size: 1.5em;
+	color: #ffffff;
+	text-align: center;
+}
+
+.today {
+	
+}
+
+.beforeNewYear {
+	
+}
