@@ -1,63 +1,120 @@
 'use strict';
 
 /**
- * Создать базовый класс Персонажа с параметрами: раса, имя, язык и метод - говорить (выводит язык и имя в консоль).
+ * Создайте класс Car у которого есть марка, модель и пробег (все свойства приватные, задаются в конструкторе). 
 
- * Создать класс Орка, который наследуется от Персонажа, у которого есть оружие и который имеет метод - удара.
-
- * Создать класс Эльфа, который наследуется от Персонажа, у которого есть типа заклинаний и метод – создать заклинание.
-
- * Использовать прототипное наследование. Все методы просто выводят что-то в консоль.
+ * Сделайте для него возможность менять пробег через get и set.
+ * Добавьте метод info, который выводит в консоль марку, модели и пробег.
 
 */
 
-function Actor(race, name, language) {
-	this.race = race;
-	this.name = name;
-	this.language = language;
+class Car {
+	#brand;
+	#model;
+	#mileage;
+
+	#errors = {
+		brand: 'Марка автомобиля должна быть непустой строкой',
+		model: 'Модель автомобиля должна быть непустой строкой',
+		mileage: 'Пробег должен быть неотрицательным числом',
+		mileageDecrease: 'Пробег не может быть уменьшен (скручен)',
+	};
+
+	constructor(brand, model, mileage = 0) {
+		this.#validate(brand, model, mileage);
+
+		this.#brand = brand;
+		this.#model = model;
+		this.#mileage = mileage;
+	}
+
+	#validate(brand, model, mileage) {
+		const errors = [];
+
+		if (typeof brand !== 'string' || brand.trim() === '') {
+			errors.push(this.#errors.brand);
+		}
+
+		if (typeof model !== 'string' || model.trim() === '') {
+			errors.push(this.#errors.model);
+		}
+
+		if (typeof mileage !== 'number' || mileage < 0) {
+			errors.push(this.#errors.mileage);
+		}
+
+		if (errors.length > 0) {
+			throw new Error(errors.join('\n'));
+		}
+	}
+
+	get mileage() {
+		return this.#mileage;
+	}
+
+	set mileage(newMileage) {
+		if (typeof newMileage !== 'number' || newMileage < 0) {
+			throw new Error(this.#errors.mileage);
+		}
+
+		// Защита от скручивания пробега
+		if (newMileage < this.#mileage) {
+			throw new Error(this.#errors.mileageDecrease);
+		}
+
+		this.#mileage = newMileage;
+	}
+
+	get brand() {
+		return this.#brand;
+	}
+
+	get model() {
+		return this.#model;
+	}
+
+	info() {
+		console.log(
+			`Марка: ${this.#brand}\nМодель: ${this.#model}\nПробег: ${this.#mileage} км`,
+		);
+	}
 }
 
-Actor.prototype.introduce = function () {
-	console.log(`[${this.language}] Меня зовут ${this.name}`);
-};
+// Тесты для проверки защиты от скручивания
+function testMileageProtection() {
+	console.log('=== ТЕСТИРОВАНИЕ ЗАЩИТЫ ОТ СКРУЧИВАНИЯ ===\n');
 
-function Orc(name, weapon) {
-	Actor.call(this, 'Орк', name, 'Оркский');
-	this.weapon = weapon;
+	try {
+		const car = new Car('Toyota', 'Camry', 50000);
+		console.log('✅ Создан автомобиль с пробегом 50000');
+
+		// Корректное увеличение
+		car.mileage = 55000;
+		console.log('✅ Увеличение пробега до 55000 - работает');
+
+		// Попытка скрутить
+		try {
+			car.mileage = 40000;
+			console.log('❌ Скручивание пробега должно быть запрещено');
+		} catch (error) {
+			console.log('✅ Защита работает: скручивание запрещено');
+			console.log(`   Ошибка: "${error.message}"`);
+		}
+
+		console.log(`\nИтоговый пробег: ${car.mileage}`); // Должно быть 55000
+	} catch (error) {
+		console.log('❌ Ошибка:', error.message);
+	}
 }
 
-Orc.prototype = Object.create(Actor.prototype);
-Orc.prototype.constructor = Orc;
-
-Orc.prototype.attack = function () {
-	console.log(`Орк ${this.name} атакует с помощью ${this.weapon}!`);
-};
-
-function Elf(name, magicType) {
-	Actor.call(this, 'Эльф', name, 'Эльфийский');
-	this.magicType = magicType;
-}
-
-Elf.prototype = Object.create(Actor.prototype);
-Elf.prototype.constructor = Elf;
-
-Elf.prototype.cast = function () {
-	console.log(
-		`Эльф ${this.name} кастует заклинание с типом: ${this.magicType}!`,
-	);
-};
-
-const orc = new Orc('Гарош', 'топор');
-orc.introduce();
-orc.attack();
-
-const elf = new Elf("Кель'Тас", 'Магия крови');
-elf.introduce();
-elf.cast();
+testMileageProtection();
 
 /**
- * app.js:21 [Оркский] Меня зовут Гарош
- * app.js:33 Орк Гарош атакует с помощью топор!
- * app.js:21 [Эльфийский] Меня зовут Кель'Тас
- * app.js:45 Эльф Кель'Тас кастует заклинание с типом: Магия крови!
+app.js:85 === ТЕСТИРОВАНИЕ ЗАЩИТЫ ОТ СКРУЧИВАНИЯ ===
+app.js:89 ✅ Создан автомобиль с пробегом 50000
+app.js:93 ✅ Увеличение пробега до 55000 - работает
+app.js:100 ✅ Защита работает: скручивание запрещено
+app.js:101    Ошибка: "Пробег не может быть уменьшен (скручен)"
+app.js:104 
+Итоговый пробег: 55000
  */
