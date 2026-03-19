@@ -1,59 +1,90 @@
-'use strict';
-
 /**
-Спроектируйте класс Billing со свойством amount и методом calculateTotal для расчёта счёта. Сделайте разный calculateTotal для разных типов:
- - fixBilling - где нужно вернуть amount как результат
- - hourBilling - который считает amount * число часов
- - itemBilling где считается amount * число элементов
-
-Соблюдайте принцип открытости / закрытости!
-*/
-
+ Сделайте запрос на https://pokeapi.co/api/v2/pokemon/ditto
+ 
+ После получения, получите информацию о первой его ablility по ссылке, которая приходит при первом запросе. Там найдите описание на английском и выведите в консоль:
+ */
 'use strict';
 
-// Базовый класс (закрыт для модификации)
-class Billing {
-	constructor(amount) {
-		this.amount = amount;
-	}
+const baseUrl = 'https://pokeapi.co/api/v2/pokemon/ditto';
 
-	calculateTotal() {
-		return this.amount;
-	}
-}
+const methods = {
+	GET: 'GET',
+};
 
-// Фиксированный счет (использует базовую реализацию)
-class FixedBilling extends Billing {}
-
-// Почасовой счет
-class HourBilling extends Billing {
-	constructor(amount, hours) {
-		super(amount);
-		this.hours = hours;
-	}
-
-	calculateTotal() {
-		return this.amount * this.hours;
+function safeParse(jsonString) {
+	try {
+		return JSON.parse(jsonString);
+	} catch (error) {
+		console.error('Ошибка парсинга JSON:', error);
+		return null;
 	}
 }
 
-// Счет по элементам
-class ItemBilling extends Billing {
-	constructor(amount, items) {
-		super(amount);
-		this.items = items;
+class RequestHelper {
+	static sendRequest(method, url, callback) {
+		const xhr = new XMLHttpRequest();
+		xhr.open(method, url);
+
+		xhr.addEventListener('load', function () {
+			if (this.status === 200) {
+				const data = safeParse(this.responseText);
+				callback(null, data);
+			} else {
+				callback(`Ошибка ${this.status}: ${this.statusText}`, null);
+			}
+		});
+
+		xhr.addEventListener('error', function () {
+			callback('Сетевая ошибка', null);
+		});
+
+		xhr.send();
+	}
+}
+
+class AbilityElement {
+	constructor(abilityData) {
+		this.name = abilityData.ability.name;
+		this.url = abilityData.ability.url;
+		this.effect_entries = null;
 	}
 
-	calculateTotal() {
-		return this.amount * this.items;
+	getAbilityInfo(callback) {
+		RequestHelper.sendRequest(methods.GET, this.url, (err, data) => {
+			if (err) {
+				console.error('Ошибка получения способности:', err);
+				callback(err, null);
+				return;
+			}
+			this.effect_entries = data.effect_entries || [];
+			callback(null, this);
+		});
+	}
+
+	getEffect(language = 'en') {
+		if (!this.effect_entries) return null;
+		const entry = this.effect_entries.find(
+			(entry) => entry.language?.name === language,
+		);
+		return entry ? entry.effect : null;
 	}
 }
 
 // Использование
-const fixed = new FixedBilling(1000);
-const hourly = new HourBilling(50, 160);
-const item = new ItemBilling(200, 5);
+RequestHelper.sendRequest(methods.GET, baseUrl, (err, pokemonData) => {
+	if (err) {
+		console.error('Ошибка загрузки покемона:', err);
+		return;
+	}
 
-console.log('Фиксированный:', fixed.calculateTotal()); // 1000
-console.log('Почасовой:', hourly.calculateTotal()); // 8000
-console.log('Поэлементный:', item.calculateTotal()); // 1000
+	if (pokemonData.abilities && pokemonData.abilities.length > 0) {
+		const ability = new AbilityElement(pokemonData.abilities[0]);
+
+		ability.getAbilityInfo((err, abilityWithInfo) => {
+			if (err) return;
+
+			const effect = abilityWithInfo.getEffect('en');
+			console.log('Описание способности:', effect);
+		});
+	}
+});
