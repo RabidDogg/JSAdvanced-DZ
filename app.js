@@ -1,80 +1,111 @@
 /**
-Создать функцию race(), которая будет принимать массив Promise, и возвращать первый успешно выполненный или отклоненный.
+Сделать 5 кнопок с текстом “Нажми меня” и div, где отображается число нажатий (по умолчанию 0).
+
+При нажатии кнопки, текст на ней меняется на “Нажата!”. У всех остальных – “Нажми меня”
+С нажатием любой кнопки счётчик увеличивается на 1.
+
 
 */
 'use strict';
 
-function race(promises) {
-	return new Promise((resolve, reject) => {
-		promises.forEach((promise) => {
-			Promise.resolve(promise).then(resolve, reject);
-		});
-	});
+/**
+ * Создаёт кнопку и добавляет её в родительский элемент
+ * @param {HTMLElement} parent - родительский элемент, в который добавляется кнопка
+ * @returns {HTMLButtonElement} Созданная кнопка
+ */
+function createButton(parent) {
+	if (!(parent instanceof HTMLElement)) {
+		throw new Error(
+			'Родительский элемент должен быть экземпляром HTMLElement',
+		);
+	}
+
+	const btn = document.createElement('button');
+	btn.textContent = 'Нажми меня';
+	parent.appendChild(btn);
+
+	return btn;
 }
 
-// Тесты
-function runTests() {
-	console.log('=== ТЕСТИРОВАНИЕ race() ===\n');
+/**
+ * Устанавливает состояние нажатой кнопки и сбрасывает предыдущую
+ * @param {HTMLButtonElement} currentBtn - текущая нажатая кнопка
+ * @param {HTMLButtonElement|null} prevButton - предыдущая нажатая кнопка
+ */
+function setPressedButton(currentBtn, prevButton) {
+	if (!(currentBtn instanceof HTMLElement)) {
+		throw new Error('currentBtn должен быть HTML элементом');
+	}
 
-	// Тест 1: Первый успешный промис
-	const test1 = [
-		new Promise((resolve) => setTimeout(() => resolve('fast'), 50)),
-		new Promise((resolve) => setTimeout(() => resolve('slow'), 100)),
-	];
-
-	race(test1)
-		.then((result) => {
-			console.log(
-				'✅ Тест 1 (первый успешный):',
-				result === 'fast' ? 'passed' : 'failed',
-				`→ ${result}`,
-			);
-		})
-		.catch(() => console.log('❌ Тест 1 провален'));
-
-	// Тест 2: Первый отклонённый промис
-	const test2 = [
-		new Promise((_, reject) => setTimeout(() => reject('error fast'), 30)),
-		new Promise((resolve) => setTimeout(() => resolve('success'), 100)),
-	];
-
-	race(test2).catch((error) => {
-		console.log(
-			'✅ Тест 2 (первый отклонённый):',
-			error === 'error fast' ? 'passed' : 'failed',
-			`→ ${error}`,
+	if (prevButton && !(prevButton instanceof HTMLElement)) {
+		throw new Error(
+			'prevButton должен быть HTML элементом, если он передан',
 		);
-	});
+	}
 
-	// Тест 3: Непромисные значения
-	const test3 = [
-		42,
-		new Promise((resolve) => setTimeout(() => resolve('promise'), 50)),
-	];
+	if (prevButton === currentBtn) {
+		return;
+	}
 
-	race(test3).then((result) => {
-		console.log(
-			'✅ Тест 3 (непромисные значения):',
-			result === 42 ? 'passed' : 'failed',
-			`→ ${result}`,
-		);
-	});
+	if (prevButton) {
+		prevButton.classList.remove('pressed');
+		prevButton.textContent = 'Нажми меня';
+	}
 
-	// Тест 4: Пустой массив
-	const test4 = [];
-
-	race(test4)
-		.then(() => {
-			console.log('❌ Тест 4: промис не должен разрешиться');
-		})
-		.catch(() => {
-			console.log('✅ Тест 4 (пустой массив): промис навсегда в pending');
-		});
-
-	// Отложенный вывод для завершения всех тестов
-	setTimeout(() => {
-		console.log('\n=== ТЕСТЫ ЗАВЕРШЕНЫ ===');
-	}, 200);
+	currentBtn.classList.add('pressed');
+	currentBtn.textContent = 'Нажата!';
 }
 
-runTests();
+/**
+ * Обновляет значение счётчика на странице
+ * @param {HTMLElement} counterElement - элемент счётчика
+ * @returns {number} Новое значение счётчика
+ */
+function updateCounter(counterElement) {
+	const currentCount = parseInt(counterElement.dataset.count || '0', 10);
+	const newCount = currentCount + 1;
+
+	counterElement.dataset.count = newCount;
+	counterElement.textContent = `Число нажатий на кнопки: ${newCount}`;
+
+	return newCount;
+}
+
+/**
+ * Обработчик клика на контейнере с кнопками
+ * @param {MouseEvent} event - событие клика
+ */
+function clickHandler(event) {
+	const currentBtn = event.target.closest('button');
+	if (!currentBtn) return;
+
+	const container = currentBtn.closest('app');
+	if (!container) return;
+
+	const counter = container.querySelector('.counter');
+	const prevButton = container.querySelector('.pressed');
+
+	setPressedButton(currentBtn, prevButton);
+	updateCounter(counter);
+}
+
+/**
+ * Инициализация приложения: создание кнопок и установка обработчиков
+ */
+async function initApp() {
+	const app = document.querySelector('app');
+	if (!app) {
+		console.error('Контейнер app не найден');
+		return;
+	}
+
+	// Создаём 5 кнопок
+	for (let i = 0; i < 5; i++) {
+		createButton(app);
+	}
+
+	app.addEventListener('click', clickHandler);
+}
+
+// Запуск приложения после полной загрузки DOM
+window.addEventListener('load', initApp);
