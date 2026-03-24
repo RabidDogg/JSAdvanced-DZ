@@ -1,0 +1,33 @@
+{
+	"name": "dz",
+	"version": "1.0.0",
+	"description": "\"Домашние задания продвинутого курса JS\"",
+	"keywords": [
+		"dz",
+		"javascript",
+		"js"
+	],
+	"homepage": "https://github.com/RabidDogg/JSAdvanced-DZ#readme",
+	"bugs": {
+		"url": "https://github.com/RabidDogg/JSAdvanced-DZ/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/RabidDogg/JSAdvanced-DZ.git"
+	},
+	"license": "MIT",
+	"author": "RabidDog",
+	"type": "commonjs",
+	"main": "index.js",
+	"scripts": {
+		"build-cjs": "rollup --format=cjs --file=bundle.cjs.js --input index.js",
+		"build-iife": "rollup --format=iife --file=bundle.iife.js --input index.js",
+		"build-esm": "rollup --format=esm --file=bundle.esm.js --input index.js",
+		"watch": "rollup --format=esm --file=bundle.js --input index.js --watch",
+		"start-dev": "live-server --port=5500 --host=127.0.0.1"
+	},
+	"devDependencies": {
+		"live-server": "^1.2.2",
+		"rollup": "^4.60.0"
+	}
+}
